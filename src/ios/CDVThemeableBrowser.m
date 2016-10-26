@@ -20,6 +20,7 @@
 #import "CDVThemeableBrowser.h"
 #import <Cordova/CDVPluginResult.h>
 #import <Cordova/CDVUserAgentUtil.h>
+#import "JHCustomMenu.h"
 
 #define    kThemeableBrowserTargetSelf @"_self"
 #define    kThemeableBrowserTargetSystem @"_system"
@@ -280,6 +281,7 @@
     self.themeableBrowserViewController.webView.scalesPageToFit = browserOptions.zoom;
     self.themeableBrowserViewController.webView.mediaPlaybackRequiresUserAction = browserOptions.mediaplaybackrequiresuseraction;
     self.themeableBrowserViewController.webView.allowsInlineMediaPlayback = browserOptions.allowinlinemediaplayback;
+    self.themeableBrowserViewController.webView.scrollView.bounces = NO;
     if (IsAtLeastiOSVersion(@"6.0")) {
         self.themeableBrowserViewController.webView.keyboardDisplayRequiresUserAction = browserOptions.keyboarddisplayrequiresuseraction;
         self.themeableBrowserViewController.webView.suppressesIncrementalRendering = browserOptions.suppressesincrementalrendering;
@@ -597,6 +599,12 @@
 @end
 
 #pragma mark CDVThemeableBrowserViewController
+
+@interface CDVThemeableBrowserViewController ()<JHCustomMenuDelegate>
+    
+@property (nonatomic, strong) JHCustomMenu *customMenu;
+
+@end
 
 @implementation CDVThemeableBrowserViewController
 
@@ -1200,31 +1208,44 @@
     [self emitEventForButton:_browserOptions.customButtons[index] withIndex:[NSNumber numberWithLong:index]];
 }
 
-- (void)goMenu:(id)sender
+- (void)goMenu:(UIButton *)sender
 {
     [self emitEventForButton:_browserOptions.menu];
 
     if (_browserOptions.menu && _browserOptions.menu[kThemeableBrowserPropItems]) {
         NSArray* menuItems = _browserOptions.menu[kThemeableBrowserPropItems];
-        NSMutableArray *listData = [[NSMutableArray alloc] init];
+        NSMutableArray *textAry = [[NSMutableArray alloc] init];
+        NSMutableArray *imgAry = [[NSMutableArray alloc] init];
         for (NSDictionary *menuItem  in menuItems) {
-            Item *item = [[Item alloc] init];
-            item.icon = menuItem[@"image"];
-            item.title = menuItem[@"label"];
-            [listData addObject:item];
+            
+            [textAry addObject:menuItem[@"label"]];
+            [imgAry addObject:menuItem[@"image"]];
         }
-        CustomActionSheet *sheet = [[CustomActionSheet alloc] initWithList:listData title:nil];
-        sheet.delegate = self;
-        [sheet showInView:self];
+        __weak __typeof(self) weakSelf = self;
+        if (!self.customMenu) {
+            self.customMenu = [[JHCustomMenu alloc] initWithDataArr:textAry origin:CGPointMake(0, self.toolbar.frame.origin.y+self.toolbar.frame.size.height+1) width:self.view.frame.size.width rowHeight:44];
+            _customMenu.delegate = self;
+            _customMenu.dismiss = ^() {
+                weakSelf.customMenu = nil;
+            };
+            _customMenu.arrImgName = imgAry;
+            [self.view addSubview:_customMenu];
+        } else {
+            [_customMenu dismissWithCompletion:^(JHCustomMenu *object) {
+                weakSelf.customMenu = nil;
+            }];
+        }
     } else {
         [self.navigationDelegate emitWarning:kThemeableBrowserEmitCodeUndefined
                                  withMessage:@"Menu items undefined. No menu will be shown."];
     }
 }
 
--(void) didSelectIndex:(NSInteger)index{
-    [self menuSelected:index];
-}
+- (void)jhCustomMenu:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+    {
+        NSLog(@"select: %ld", indexPath.row);
+        [self menuSelected:indexPath.row+1];
+    }
 
 - (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
 {
