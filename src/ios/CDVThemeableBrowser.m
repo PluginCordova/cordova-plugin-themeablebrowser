@@ -129,6 +129,8 @@
         NSURL* baseUrl = [self.webView.request URL];
 #endif
         NSURL* absoluteUrl = [[NSURL URLWithString:url relativeToURL:baseUrl] absoluteURL];
+        
+        [self setLocalStorageToThemeableBrowser:absoluteUrl];
 
         if ([self isSystemUrl:absoluteUrl]) {
             target = kThemeableBrowserTargetSystem;
@@ -149,6 +151,61 @@
 
     [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+-(void)setLocalStorageToThemeableBrowser:(NSURL *)url{
+    NSError *error = nil;
+    NSString *libDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) lastObject];
+    NSLog(@"libDir:%@",libDir);
+    NSString *webviewlocalStorageDir= [libDir stringByAppendingPathComponent:@"WebKit/LocalStorage"];
+    NSString *wkWebviewlocalStorageDir= [libDir stringByAppendingPathComponent:@"WebKit/WebsiteData/LocalStorage"];
+    NSFileManager* fm=[NSFileManager defaultManager];
+    
+    NSMutableDictionary *localStorageDic = [[NSMutableDictionary alloc] init];
+    
+    if([fm fileExistsAtPath:wkWebviewlocalStorageDir]){
+        NSArray *fileList = [[NSArray alloc] init];
+        //fileList便是包含有该文件夹下所有文件的文件名及文件夹名的数组
+        fileList = [fm contentsOfDirectoryAtPath:wkWebviewlocalStorageDir error:&error];
+        for (NSString *file in fileList) {
+            
+            if ([file hasPrefix:@"http"]) {
+                NSString *path = [wkWebviewlocalStorageDir stringByAppendingPathComponent:file];
+                NSData *data = [NSData dataWithContentsOfFile:path];
+                NSString *fileExtensionName = [file componentsSeparatedByString:@"."].lastObject;
+                [localStorageDic setObject:data forKey:fileExtensionName];
+            }
+        }
+    }
+    else{
+        NSArray *fileList = [[NSArray alloc] init];
+        //fileList便是包含有该文件夹下所有文件的文件名及文件夹名的数组
+        fileList = [fm contentsOfDirectoryAtPath:webviewlocalStorageDir error:&error];
+        for (NSString *file in fileList) {
+            
+            if ([file hasPrefix:@"http_meteor.local"]) {
+                NSString *path = [webviewlocalStorageDir stringByAppendingPathComponent:file];
+                NSData *data = [NSData dataWithContentsOfFile:path];
+                NSString *fileExtensionName = [file componentsSeparatedByString:@"."].lastObject;
+                [localStorageDic setObject:data forKey:fileExtensionName];
+            }
+        }
+    }
+    if ([fm fileExistsAtPath:webviewlocalStorageDir]) {
+        NSNumber *port = url.port;
+        if (!port) {
+            port = [NSNumber numberWithUnsignedInt:0];
+        }
+        NSString *host = url.host;
+        NSString *scheme = url.scheme;
+        for (NSString *fileExtensionName in localStorageDic.allKeys) {
+            NSLog(@"data:%@",localStorageDic[fileExtensionName]);
+            NSString *path = [webviewlocalStorageDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_%@.%@",scheme,host,port,fileExtensionName]];
+            
+            [localStorageDic[fileExtensionName] writeToFile:path options:NSDataWritingAtomic error:&error];
+            
+        }
+    }
 }
 
 - (void)reload:(CDVInvokedUrlCommand*)command
