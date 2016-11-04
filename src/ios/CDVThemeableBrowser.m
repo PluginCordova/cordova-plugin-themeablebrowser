@@ -187,7 +187,7 @@
         fileList = [fm contentsOfDirectoryAtPath:wkWebviewlocalStorageDir error:&error];
         for (NSString *file in fileList) {
             
-            if ([file hasPrefix:@"http"]) {
+            if ([file hasPrefix:@"http_localhost"]) {
                 NSString *path = [wkWebviewlocalStorageDir stringByAppendingPathComponent:file];
                 NSData *data = [NSData dataWithContentsOfFile:path];
                 NSString *fileExtensionName = [file componentsSeparatedByString:@"."].lastObject;
