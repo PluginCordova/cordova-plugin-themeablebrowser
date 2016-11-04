@@ -38,6 +38,10 @@ ThemeableBrowser.prototype = {
         exec(null, null, 'ThemeableBrowser', 'close', []);
         return this;
     },
+    updateMenu: function (menuItems) {
+        exec(null, null, 'ThemeableBrowser', 'updateMenu', [menuItems]);
+        return this;
+    },
     show: function (eventname) {
         exec(null, null, 'ThemeableBrowser', 'show', []);
         return this;
