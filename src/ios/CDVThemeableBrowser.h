@@ -20,6 +20,7 @@
 #import <Cordova/CDVPlugin.h>
 #import <Cordova/CDVInvokedUrlCommand.h>
 #import <Cordova/CDVScreenOrientationDelegate.h>
+#import <WebKit/WebKit.h>
 #ifdef __CORDOVA_4_0_0
     #import <Cordova/CDVUIWebViewDelegate.h>
 #else
@@ -95,7 +96,7 @@
     
 }
 
-@property (nonatomic, strong) IBOutlet UIWebView* webView;
+@property (nonatomic, strong) IBOutlet WKWebView* webView;
 @property (nonatomic, strong) IBOutlet UIButton* closeButton;
 @property (nonatomic, strong) IBOutlet UILabel* addressLabel;
 @property (nonatomic, strong) IBOutlet UILabel* titleLabel;

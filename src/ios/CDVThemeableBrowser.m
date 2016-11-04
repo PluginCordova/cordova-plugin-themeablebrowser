@@ -352,14 +352,14 @@
     }
     
     // UIWebView options
-    self.themeableBrowserViewController.webView.scalesPageToFit = browserOptions.zoom;
-    self.themeableBrowserViewController.webView.mediaPlaybackRequiresUserAction = browserOptions.mediaplaybackrequiresuseraction;
-    self.themeableBrowserViewController.webView.allowsInlineMediaPlayback = browserOptions.allowinlinemediaplayback;
+    //self.themeableBrowserViewController.webView.scalesPageToFit = browserOptions.zoom;
+    //self.themeableBrowserViewController.webView.mediaPlaybackRequiresUserAction = browserOptions.mediaplaybackrequiresuseraction;
+    //self.themeableBrowserViewController.webView.allowsInlineMediaPlayback = browserOptions.allowinlinemediaplayback;
     self.themeableBrowserViewController.webView.scrollView.bounces = NO;
-    if (IsAtLeastiOSVersion(@"6.0")) {
-        self.themeableBrowserViewController.webView.keyboardDisplayRequiresUserAction = browserOptions.keyboarddisplayrequiresuseraction;
-        self.themeableBrowserViewController.webView.suppressesIncrementalRendering = browserOptions.suppressesincrementalrendering;
-    }
+//    if (IsAtLeastiOSVersion(@"6.0")) {
+//        self.themeableBrowserViewController.webView.keyboardDisplayRequiresUserAction = browserOptions.keyboarddisplayrequiresuseraction;
+//        self.themeableBrowserViewController.webView.suppressesIncrementalRendering = browserOptions.suppressesincrementalrendering;
+//    }
     
     [self.themeableBrowserViewController navigateTo:url];
     if (!browserOptions.hidden) {
@@ -439,7 +439,9 @@
     if (!_injectedIframeBridge) {
         _injectedIframeBridge = YES;
         // Create an iframe bridge in the new document to communicate with the CDVThemeableBrowserViewController
-        [self.themeableBrowserViewController.webView stringByEvaluatingJavaScriptFromString:@"(function(d){var e = _cdvIframeBridge = d.createElement('iframe');e.style.display='none';d.body.appendChild(e);})(document)"];
+        [self.themeableBrowserViewController.webView evaluateJavaScript:@"(function(d){var e = _cdvIframeBridge = d.createElement('iframe');e.style.display='none';d.body.appendChild(e);})(document)" completionHandler:^(id _Nullable response, NSError * _Nullable error) {
+            NSLog(@"response:%@..error:%@",response,error);
+        }];
     }
     
     if (jsWrapper != nil) {
@@ -448,10 +450,14 @@
         if (sourceArrayString) {
             NSString* sourceString = [sourceArrayString substringWithRange:NSMakeRange(1, [sourceArrayString length] - 2)];
             NSString* jsToInject = [NSString stringWithFormat:jsWrapper, sourceString];
-            [self.themeableBrowserViewController.webView stringByEvaluatingJavaScriptFromString:jsToInject];
+            [self.themeableBrowserViewController.webView evaluateJavaScript:jsToInject completionHandler:^(id _Nullable response, NSError * _Nullable error) {
+                NSLog(@"response:%@..error:%@",response,error);
+            }];
         }
     } else {
-        [self.themeableBrowserViewController.webView stringByEvaluatingJavaScriptFromString:source];
+        [self.themeableBrowserViewController.webView evaluateJavaScript:source completionHandler:^(id _Nullable response, NSError * _Nullable error) {
+            NSLog(@"response:%@..error:%@",response,error);
+        }];
     }
 }
 
@@ -533,10 +539,8 @@
  * value to pass to the callback. [NSURL path] should take care of the URL-unescaping, and a JSON_EXCEPTION
  * is returned if the JSON is invalid.
  */
-- (BOOL)webView:(UIWebView*)theWebView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType
+- (BOOL)webView:(WKWebView*)theWebView shouldStartLoadWithURL:(NSURL *)url
 {
-    NSURL* url = request.URL;
-    BOOL isTopLevelNavigation = [request.URL isEqual:[request mainDocumentURL]];
     
     // See if the url uses the 'gap-iab' protocol. If so, the host should be the id of a callback to execute,
     // and the path, if present, should be a JSON-encoded value to pass to the callback.
@@ -563,7 +567,7 @@
             [self.commandDelegate sendPluginResult:pluginResult callbackId:scriptCallbackId];
             return NO;
         }
-    } else if ((self.callbackId != nil) && isTopLevelNavigation) {
+    } else if ((self.callbackId != nil)) {
         // Send a loadstart event for each top-level navigation (includes redirects).
         NSString * urlStr = [url absoluteString];
         
@@ -603,12 +607,12 @@
     return YES;
 }
 
-- (void)webViewDidStartLoad:(UIWebView*)theWebView
+- (void)webViewDidStartLoad:(WKWebView*)theWebView
 {
     _injectedIframeBridge = NO;
 }
 
-- (void)webViewDidFinishLoad:(UIWebView*)theWebView
+- (void)webViewDidFinishLoad:(WKWebView*)theWebView
 {
     if (self.callbackId != nil) {
         // TODO: It would be more useful to return the URL the page is actually on (e.g. if it's been redirected).
@@ -621,7 +625,7 @@
     }
 }
 
-- (void)webView:(UIWebView*)theWebView didFailLoadWithError:(NSError*)error
+- (void)webView:(WKWebView*)theWebView didFailLoadWithError:(NSError*)error
 {
     if (self.callbackId != nil) {
         NSString* url = [self.themeableBrowserViewController.currentURL absoluteString];
@@ -689,7 +693,7 @@
 
 #pragma mark CDVThemeableBrowserViewController
 
-@interface CDVThemeableBrowserViewController ()<JHCustomMenuDelegate>
+@interface CDVThemeableBrowserViewController ()<JHCustomMenuDelegate,WKNavigationDelegate,WKUIDelegate>
 
 @property (nonatomic, strong) JHCustomMenu *customMenu;
 
@@ -730,14 +734,15 @@
     if (!_browserOptions.fullscreen) {
         webViewBounds.size.height -= toolbarHeight;
     }
-    self.webView = [[UIWebView alloc] initWithFrame:webViewBounds];
+    self.webView = [[WKWebView alloc] initWithFrame:webViewBounds];
     
     self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
     
     [self.view addSubview:self.webView];
     [self.view sendSubviewToBack:self.webView];
     
-    self.webView.delegate = _webViewDelegate;
+    self.webView.navigationDelegate = self;
+    self.webView.UIDelegate = self;
     self.webView.backgroundColor = [UIColor whiteColor];
     
     self.webView.clearsContextBeforeDrawing = YES;
@@ -745,7 +750,7 @@
     self.webView.contentMode = UIViewContentModeScaleToFill;
     self.webView.multipleTouchEnabled = YES;
     self.webView.opaque = YES;
-    self.webView.scalesPageToFit = NO;
+    //self.webView.scalesPageToFit = NO;
     self.webView.userInteractionEnabled = YES;
     
     self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
@@ -1445,45 +1450,32 @@
     }
 }
 
-#pragma mark UIWebViewDelegate
-
-- (void)webViewDidStartLoad:(UIWebView*)theWebView
-{
+#pragma mark WkWebViewDelegate
+// 页面开始加载时调用
+- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation{
     // loading url, start spinner
     
     self.addressLabel.text = NSLocalizedString(@"Loading...", nil);
     
     [self.spinner startAnimating];
     
-    return [self.navigationDelegate webViewDidStartLoad:theWebView];
+    return [self.navigationDelegate webViewDidStartLoad:webView];
 }
-
-- (BOOL)webView:(UIWebView*)theWebView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType
-{
-    BOOL isTopLevelNavigation = [request.URL isEqual:[request mainDocumentURL]];
-    
-    if (isTopLevelNavigation) {
-        self.currentURL = request.URL;
-    }
-    
-    [self updateButtonDelayed:theWebView];
-    
-    return [self.navigationDelegate webView:theWebView shouldStartLoadWithRequest:request navigationType:navigationType];
-}
-
-- (void)webViewDidFinishLoad:(UIWebView*)theWebView
-{
+// 页面加载完成之后调用
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation{
     // update url, stop spinner, update back/forward
     
     self.addressLabel.text = [self.currentURL absoluteString];
-    [self updateButton:theWebView];
+    [self updateButton:webView];
     
     if (self.titleLabel && _browserOptions.title
         && !_browserOptions.title[kThemeableBrowserPropStaticText]
         && [self getBoolFromDict:_browserOptions.title withKey:kThemeableBrowserPropShowPageTitle]) {
         // Update title text to page title when title is shown and we are not
         // required to show a static text.
-        self.titleLabel.text = [self.webView stringByEvaluatingJavaScriptFromString:@"document.title"];
+        [self.webView evaluateJavaScript:@"document.title" completionHandler:^(id _Nullable response, NSError * _Nullable error) {
+            self.titleLabel.text = response;
+        }];
     }
     
     [self.spinner stopAnimating];
@@ -1499,26 +1491,72 @@
     //    from it must pass through its white-list. This *does* break PDFs that
     //    contain links to other remote PDF/websites.
     // More info at https://issues.apache.org/jira/browse/CB-2225
-    BOOL isPDF = [@"true" isEqualToString :[theWebView stringByEvaluatingJavaScriptFromString:@"document.body==null"]];
+    BOOL __block isPDF;
+    [webView evaluateJavaScript:@"document.body==null" completionHandler:^(id _Nullable responce, NSError * _Nullable error) {
+        isPDF = [@"true" isEqualToString :responce];
+    }];
     if (isPDF) {
         [CDVUserAgentUtil setUserAgent:_prevUserAgent lockToken:_userAgentLockToken];
     }
     
-    [self.navigationDelegate webViewDidFinishLoad:theWebView];
+    [self.navigationDelegate webViewDidFinishLoad:webView];
+    
 }
-
-- (void)webView:(UIWebView*)theWebView didFailLoadWithError:(NSError*)error
-{
-    [self updateButton:theWebView];
+// 页面加载失败时调用
+-(void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error{
+    [self updateButton:webView];
     
     [self.spinner stopAnimating];
     
     self.addressLabel.text = NSLocalizedString(@"Load Error", nil);
     
-    [self.navigationDelegate webView:theWebView didFailLoadWithError:error];
+    [self.navigationDelegate webView:webView didFailLoadWithError:error];
 }
 
-- (void)updateButton:(UIWebView*)theWebView
+// 在收到响应后，决定是否跳转
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationResponse:(WKNavigationResponse *)navigationResponse decisionHandler:(void (^)(WKNavigationResponsePolicy))decisionHandler{
+    NSLog(@"%@", navigationResponse.response);
+    
+    self.currentURL = navigationResponse.response.URL;
+    [self updateButtonDelayed:webView];
+    
+    
+    BOOL allow = [self.navigationDelegate webView:webView shouldStartLoadWithURL:navigationResponse.response.URL];
+    if (allow) {
+        return decisionHandler(WKNavigationResponsePolicyAllow);
+    }
+    decisionHandler(WKNavigationResponsePolicyCancel);
+}
+
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
+{
+    decisionHandler(WKNavigationActionPolicyAllow);
+}
+
+-(WKWebView *)webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures
+{
+    NSLog(@"createWebViewWithConfiguration");
+    if (!navigationAction.targetFrame.isMainFrame) {
+        [webView loadRequest:navigationAction.request];
+    }
+    return nil;
+}
+//- (BOOL)webView:(UIWebView*)theWebView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType
+//{
+//    BOOL isTopLevelNavigation = [request.URL isEqual:[request mainDocumentURL]];
+//    
+//    if (isTopLevelNavigation) {
+//        self.currentURL = request.URL;
+//    }
+//    
+//    [self updateButtonDelayed:theWebView];
+//    
+//    return [self.navigationDelegate webView:theWebView shouldStartLoadWithRequest:request navigationType:navigationType];
+//    
+//}
+
+
+- (void)updateButton:(WKWebView*)theWebView
 {
     if (self.backButton) {
         self.backButton.enabled = _browserOptions.backButtonCanClose || theWebView.canGoBack;
@@ -1539,7 +1577,7 @@
  * will have to depend on the back and forward button to give us hints when to
  * change button states.
  */
-- (void)updateButtonDelayed:(UIWebView*)theWebView
+- (void)updateButtonDelayed:(WKWebView*)theWebView
 {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         [self updateButton:theWebView];
