@@ -107,7 +107,7 @@
 -(void)updateMenu:(CDVInvokedUrlCommand *)command{
     
     NSArray *menuItems = [command argumentAtIndex:0];
-    [self.themeableBrowserViewController.browserOptions.menu setValue:menuItems forKey:kThemeableBrowserPropItems];
+    [self.themeableBrowserViewController.browserOptions.menu setObject:menuItems forKey:kThemeableBrowserPropItems];
 }
 
 - (BOOL) isSystemUrl:(NSURL*)url
@@ -253,7 +253,8 @@
             NSDictionary *dict = jsonObj;
             for (NSString *key in dict) {
                 if ([obj respondsToSelector:NSSelectorFromString(key)]) {
-                    [obj setValue:dict[key] forKey:key];
+                    NSMutableDictionary *mdic = [NSMutableDictionary dictionaryWithDictionary:dict[key]];
+                    [obj setValue:mdic forKey:key];
                 }
             }
         }
@@ -702,6 +703,7 @@
 @implementation CDVThemeableBrowserViewController
 
 @synthesize currentURL;
+
 
 - (id)initWithUserAgent:(NSString*)userAgent prevUserAgent:(NSString*)prevUserAgent browserOptions: (CDVThemeableBrowserOptions*) browserOptions navigationDelete:(CDVThemeableBrowser*) navigationDelegate statusBarStyle:(UIStatusBarStyle) statusBarStyle
 {

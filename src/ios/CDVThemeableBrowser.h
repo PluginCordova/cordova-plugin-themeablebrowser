@@ -52,7 +52,7 @@
 @property (nonatomic) NSDictionary* backButton;
 @property (nonatomic) NSDictionary* forwardButton;
 @property (nonatomic) NSDictionary* closeButton;
-@property (nonatomic) NSDictionary* menu;
+@property (nonatomic) NSMutableDictionary* menu;
 @property (nonatomic) NSArray* customButtons;
 @property (nonatomic) BOOL backButtonCanClose;
 @property (nonatomic) BOOL disableAnimation;
@@ -113,6 +113,7 @@
 @property (nonatomic, strong) NSArray* rightButtons;
 
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;
+
 @property (nonatomic, weak) CDVThemeableBrowser* navigationDelegate;
 @property (nonatomic) NSURL* currentURL;
 @property (nonatomic) CGFloat titleOffset;
