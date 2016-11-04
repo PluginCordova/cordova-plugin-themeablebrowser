@@ -174,7 +174,7 @@
 -(void)setLocalStorageToThemeableBrowser:(NSURL *)url{
     NSError *error = nil;
     NSString *libDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) lastObject];
-    NSLog(@"libDir:%@",libDir);
+    //NSLog(@"libDir:%@",libDir);
     NSString *webviewlocalStorageDir= [libDir stringByAppendingPathComponent:@"WebKit/LocalStorage"];
     NSString *wkWebviewlocalStorageDir= [libDir stringByAppendingPathComponent:@"WebKit/WebsiteData/LocalStorage"];
     NSFileManager* fm=[NSFileManager defaultManager];
@@ -209,7 +209,7 @@
             }
         }
     }
-    if ([fm fileExistsAtPath:webviewlocalStorageDir]) {
+    if ([fm fileExistsAtPath:wkWebviewlocalStorageDir]) {
         NSNumber *port = url.port;
         if (!port) {
             port = [NSNumber numberWithUnsignedInt:0];
@@ -217,7 +217,7 @@
         NSString *host = url.host;
         NSString *scheme = url.scheme;
         for (NSString *fileExtensionName in localStorageDic.allKeys) {
-            NSString *path = [webviewlocalStorageDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_%@.%@",scheme,host,port,fileExtensionName]];
+            NSString *path = [wkWebviewlocalStorageDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_%@.%@",scheme,host,port,fileExtensionName]];
             
             [localStorageDic[fileExtensionName] writeToFile:path options:NSDataWritingAtomic error:&error];
             
@@ -586,7 +586,8 @@
             [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
             
         }
-        if ([urlStr rangeOfString:@"chat.tiegushi.com"].location != NSNotFound) {          
+        if ([urlStr rangeOfString:@"chat.tiegushi.com"].location != NSNotFound) {
+            
             NSArray *array = [urlStr componentsSeparatedByString:@"/"];
             
             NSLog(@"toChatRoom:%@",urlStr);
