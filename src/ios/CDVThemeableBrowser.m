@@ -586,17 +586,17 @@
             [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
             
         }
-        if ([urlStr rangeOfString:@"chat.tiegushi.com"].location != NSNotFound) {
+        if ([urlStr rangeOfString:@"chat.tiegushi.com"].location != NSNotFound) {          
             NSArray *array = [urlStr componentsSeparatedByString:@"/"];
             
             NSLog(@"toChatRoom:%@",urlStr);
-            
-            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                                          messageAsDictionary:@{@"type":@"toChatRoom", @"postId":array[4]}];
-            [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
-            
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
-            
+            if (array.count>4) {
+                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                              messageAsDictionary:@{@"type":@"toChatRoom", @"postId":array[4]}];
+                [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+                
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+            }
         }
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                       messageAsDictionary:@{@"type":@"loadstart", @"url":[url absoluteString]}];
