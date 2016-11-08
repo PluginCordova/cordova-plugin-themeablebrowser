@@ -65,6 +65,8 @@
     BOOL _isShown;
     NSMutableString *_lastpostID;
 }
+@property (nonatomic, strong) dispatch_source_t timer;
+
 @end
 
 @implementation CDVThemeableBrowser
@@ -100,6 +102,8 @@
               withMessage:@"Close called but already closed."];
         return;
     }
+    
+    dispatch_source_cancel(_timer);
     // Things are cleaned up in browserExit.
     [self.themeableBrowserViewController close];
 }
@@ -158,6 +162,19 @@
     
     [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    NSTimeInterval delayTime = 3.0f;
+    NSTimeInterval timeInterval = 1.0f;
+    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+    _timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, queue);
+    dispatch_time_t startDelayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayTime * NSEC_PER_SEC));
+    dispatch_source_set_timer(_timer, startDelayTime, timeInterval * NSEC_PER_SEC, 0.1 * NSEC_PER_SEC);
+    dispatch_source_set_event_handler(_timer, ^{
+        //执行事件
+       CDVPluginResult* pluginResult; pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    });
+    dispatch_resume(_timer);
 }
 
 -(void)recordPostID:(NSURL *)url{
@@ -357,10 +374,10 @@
     //self.themeableBrowserViewController.webView.mediaPlaybackRequiresUserAction = browserOptions.mediaplaybackrequiresuseraction;
     //self.themeableBrowserViewController.webView.allowsInlineMediaPlayback = browserOptions.allowinlinemediaplayback;
     self.themeableBrowserViewController.webView.scrollView.bounces = NO;
-//    if (IsAtLeastiOSVersion(@"6.0")) {
-//        self.themeableBrowserViewController.webView.keyboardDisplayRequiresUserAction = browserOptions.keyboarddisplayrequiresuseraction;
-//        self.themeableBrowserViewController.webView.suppressesIncrementalRendering = browserOptions.suppressesincrementalrendering;
-//    }
+    //    if (IsAtLeastiOSVersion(@"6.0")) {
+    //        self.themeableBrowserViewController.webView.keyboardDisplayRequiresUserAction = browserOptions.keyboarddisplayrequiresuseraction;
+    //        self.themeableBrowserViewController.webView.suppressesIncrementalRendering = browserOptions.suppressesincrementalrendering;
+    //    }
     
     [self.themeableBrowserViewController navigateTo:url];
     if (!browserOptions.hidden) {
@@ -1323,13 +1340,24 @@
             self.customMenu = [[JHCustomMenu alloc] initWithDataArr:textAry origin:CGPointMake(0, self.toolbar.frame.origin.y+self.toolbar.frame.size.height+1) width:self.view.frame.size.width rowHeight:44];
             _customMenu.delegate = self;
             _customMenu.dismiss = ^() {
-                weakSelf.customMenu = nil;
+                //weakSelf.customMenu = nil;
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (weakSelf.customMenu != nil) {
+                        [weakSelf.customMenu removeFromSuperview];
+                        weakSelf.customMenu = nil;
+                    }
+                });
             };
             _customMenu.arrImgName = imgAry;
             [self.view addSubview:_customMenu];
         } else {
             [_customMenu dismissWithCompletion:^(JHCustomMenu *object) {
-                weakSelf.customMenu = nil;
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (weakSelf.customMenu != nil) {
+                        [weakSelf.customMenu removeFromSuperview];
+                        weakSelf.customMenu = nil;
+                    }
+                });
             }];
         }
     } else {
@@ -1518,7 +1546,7 @@
 
 // 在收到响应后，决定是否跳转
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationResponse:(WKNavigationResponse *)navigationResponse decisionHandler:(void (^)(WKNavigationResponsePolicy))decisionHandler{
-    NSLog(@"%@", navigationResponse.response);
+    //NSLog(@"%@", navigationResponse.response);
     
     self.currentURL = navigationResponse.response.URL;
     [self updateButtonDelayed:webView];
@@ -1547,15 +1575,15 @@
 //- (BOOL)webView:(UIWebView*)theWebView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType
 //{
 //    BOOL isTopLevelNavigation = [request.URL isEqual:[request mainDocumentURL]];
-//    
+//
 //    if (isTopLevelNavigation) {
 //        self.currentURL = request.URL;
 //    }
-//    
+//
 //    [self updateButtonDelayed:theWebView];
-//    
+//
 //    return [self.navigationDelegate webView:theWebView shouldStartLoadWithRequest:request navigationType:navigationType];
-//    
+//
 //}
 
 
