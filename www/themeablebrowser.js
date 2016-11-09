@@ -42,6 +42,14 @@ ThemeableBrowser.prototype = {
         exec(null, null, 'ThemeableBrowser', 'updateMenu', [menuItems]);
         return this;
     },
+    popShareStoryView: function (title,imgUrl) {
+        exec(null, null, 'ThemeableBrowser', 'popShareStoryView', [title,imgUrl]);
+        return this;
+    },
+    switchViewController:function (viewName) {
+        exec(null, null, 'ThemeableBrowser', 'switchViewController', [viewName]);
+        return this;
+    },
     show: function (eventname) {
         exec(null, null, 'ThemeableBrowser', 'show', []);
         return this;

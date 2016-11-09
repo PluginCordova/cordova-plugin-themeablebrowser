@@ -21,6 +21,8 @@
 #import <Cordova/CDVPluginResult.h>
 #import <Cordova/CDVUserAgentUtil.h>
 #import "JHCustomMenu.h"
+#import "ShareStoryTipView.h"
+#import "MainViewController.h"
 
 #define    kThemeableBrowserTargetSelf @"_self"
 #define    kThemeableBrowserTargetSystem @"_system"
@@ -64,6 +66,7 @@
 @interface CDVThemeableBrowser () {
     BOOL _isShown;
     NSMutableString *_lastpostID;
+    CDVThemeableBrowserNavigationController *_nav;
 }
 @property (nonatomic, strong) dispatch_source_t timer;
 
@@ -76,6 +79,8 @@
 {
     _isShown = NO;
     _callbackIdPattern = nil;
+    _nav = nil;
+    _lastpostID = nil;
 }
 #else
 - (CDVThemeableBrowser*)initWithWebView:(UIWebView*)theWebView
@@ -112,6 +117,77 @@
     
     NSArray *menuItems = [command argumentAtIndex:0];
     [self.themeableBrowserViewController.browserOptions.menu setObject:menuItems forKey:kThemeableBrowserPropItems];
+}
+
+- (void)popShareStoryView:(CDVInvokedUrlCommand*)command{
+    NSString *title = [command argumentAtIndex:0];
+    NSString *imgUrl = [command argumentAtIndex:1];
+    ShareStoryTipView *share=[ShareStoryTipView sharedManager];
+    share.titleLbl.text = title;
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        
+        // 多线程中下载图像
+        NSData * imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imgUrl]];
+        
+        // 回到主线程完成UI设置
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+            UIImage * image = [UIImage imageWithData:imageData];
+            share.imageView.image = image;
+            
+        });
+        
+    });
+    share.block=^(void){
+        NSLog(@"分享到故事贴群");
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                      messageAsDictionary:@{@"type":@"share-hot-post", @"postId":_lastpostID}];
+        [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+        
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+        
+    };
+    UIWindow *window=[[UIApplication sharedApplication].delegate window];
+    [window addSubview:share];
+}
+
+- (void)switchViewController:(CDVInvokedUrlCommand*)command{
+    NSString *viewName = [command argumentAtIndex:0];
+    UIViewController *topMostViewController = [self getTopMostViewController];
+    if ([viewName isEqualToString:@"browser"]) {
+        if ([topMostViewController isKindOfClass:[CDVThemeableBrowserNavigationController class]]) {
+            return;
+        }
+        else{
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (_nav != nil) {
+                    [topMostViewController presentViewController:_nav animated:NO completion:nil];
+                }
+            });
+        }
+    }
+    else if ([viewName isEqualToString:@"main"])  {
+        if ([topMostViewController isKindOfClass:[MainViewController class]]) {
+            return;
+        }
+        else{
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (_nav != nil) {
+                    [topMostViewController presentViewController:self.viewController animated:NO completion:nil];
+                }
+            });
+        }
+    }
+    
+    
+}
+
+- (UIViewController*) getTopMostViewController {
+    UIViewController *presentingViewController = [[[UIApplication sharedApplication] delegate] window].rootViewController;
+    while (presentingViewController.presentedViewController != nil) {
+        presentingViewController = presentingViewController.presentedViewController;
+    }
+    return presentingViewController;
 }
 
 - (BOOL) isSystemUrl:(NSURL*)url
@@ -405,14 +481,14 @@
     
     _isShown = YES;
     
-    CDVThemeableBrowserNavigationController* nav = [[CDVThemeableBrowserNavigationController alloc]
+    _nav = [[CDVThemeableBrowserNavigationController alloc]
                                                     initWithRootViewController:self.themeableBrowserViewController];
-    nav.orientationDelegate = self.themeableBrowserViewController;
-    nav.navigationBarHidden = YES;
+    _nav.orientationDelegate = self.themeableBrowserViewController;
+    _nav.navigationBarHidden = YES;
     // Run later to avoid the "took a long time" log message.
     dispatch_async(dispatch_get_main_queue(), ^{
         if (self.themeableBrowserViewController != nil) {
-            [self.viewController presentViewController:nav animated:animated completion:nil];
+            [self.viewController presentViewController:_nav animated:animated completion:nil];
         }
     });
 }

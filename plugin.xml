@@ -79,6 +79,8 @@
         <source-file src="src/ios/CDVThemeableBrowser.m" />
         <header-file src="src/ios/JHCustomMenu.h" />
         <source-file src="src/ios/JHCustomMenu.m" />
+        <header-file src="src/ios/ShareStoryTipView.h" />
+        <source-file src="src/ios/ShareStoryTipView.m" />
         <resource-file src="src/ios/Resources/un_publish@2x.png" />
         <resource-file src="src/ios/Resources/edit@2x.png" />
         <resource-file src="src/ios/Resources/share@2x.png" />

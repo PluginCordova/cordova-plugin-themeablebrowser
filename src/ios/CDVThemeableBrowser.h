@@ -78,6 +78,8 @@
 - (void)show:(CDVInvokedUrlCommand*)command withAnimation:(BOOL)animated;
 - (void)reload:(CDVInvokedUrlCommand*)command;
 - (void)updateMenu:(CDVInvokedUrlCommand*)command;
+- (void)popShareStoryView:(CDVInvokedUrlCommand*)command;
+- (void)switchViewController:(CDVInvokedUrlCommand*)command;
 
 @end
 
