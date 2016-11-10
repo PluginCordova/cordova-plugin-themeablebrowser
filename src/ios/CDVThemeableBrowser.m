@@ -116,7 +116,9 @@
 -(void)updateMenu:(CDVInvokedUrlCommand *)command{
     
     NSArray *menuItems = [command argumentAtIndex:0];
-    [self.themeableBrowserViewController.browserOptions.menu setObject:menuItems forKey:kThemeableBrowserPropItems];
+    if (menuItems) {
+        [self.themeableBrowserViewController.browserOptions.menu setObject:menuItems forKey:kThemeableBrowserPropItems];
+    }
 }
 
 - (void)popShareStoryView:(CDVInvokedUrlCommand*)command{
