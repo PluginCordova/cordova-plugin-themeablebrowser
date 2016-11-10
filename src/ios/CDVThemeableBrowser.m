@@ -154,32 +154,30 @@
 - (void)switchViewController:(CDVInvokedUrlCommand*)command{
     NSString *viewName = [command argumentAtIndex:0];
     UIViewController *topMostViewController = [self getTopMostViewController];
-    if ([viewName isEqualToString:@"browser"]) {
-        if ([topMostViewController isKindOfClass:[CDVThemeableBrowserNavigationController class]]) {
-            return;
-        }
-        else{
+    if ([topMostViewController isKindOfClass:[CDVThemeableBrowserNavigationController class]]) {
+        
+        NSArray *subviews = [self.themeableBrowserViewController.view subviews];
+        if ([viewName isEqualToString:@"browser"]) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                if (_nav != nil) {
-                    [topMostViewController presentViewController:_nav animated:NO completion:nil];
+                if (self.themeableBrowserViewController) {
+                    //[topMostViewController presentViewController:_nav animated:NO completion:nil];
+                    if (subviews.count>3) {
+                        [self.viewController.view removeFromSuperview];
+                    }
+                }
+            });
+        }
+        else if ([viewName isEqualToString:@"main"])  {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (self.viewController) {
+                    //[topMostViewController presentViewController:self.viewController animated:NO completion:nil];
+                    [self.themeableBrowserViewController.view addSubview:self.viewController.view];
+                    
+                    NSLog(@"fjdskl");
                 }
             });
         }
     }
-    else if ([viewName isEqualToString:@"main"])  {
-        if ([topMostViewController isKindOfClass:[MainViewController class]]) {
-            return;
-        }
-        else{
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if (_nav != nil) {
-                    [topMostViewController presentViewController:self.viewController animated:NO completion:nil];
-                }
-            });
-        }
-    }
-    
-    
 }
 
 - (UIViewController*) getTopMostViewController {
