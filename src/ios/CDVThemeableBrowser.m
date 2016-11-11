@@ -667,16 +667,28 @@
         
         if ([urlStr rangeOfString:@"cdn.tiegushi.com"].location != NSNotFound) {
             NSArray *array = [urlStr componentsSeparatedByString:@"/"];
-            NSLog(@"toPost:%@",[array lastObject]);
-            if ([_lastpostID isEqualToString:[array lastObject]]) {
-                return YES;
+            if(array.count>4){
+                NSLog(@"loading url:%@",urlStr);
+                if (array.count==6) {
+                    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                                  messageAsDictionary:@{@"type":@"section-forward", @"index":[array objectAtIndex:5]}];
+                    [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+                    
+                    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+                    
+                    return NO;
+                }
+                NSLog(@"toPost:%@",[array objectAtIndex:4]);
+                if ([_lastpostID isEqualToString:[array lastObject]]) {
+                    return YES;
+                }
+                [self recordPostID:url];
+                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                              messageAsDictionary:@{@"type":@"toPost", @"postId":[array lastObject]}];
+                [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+                
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
             }
-            [self recordPostID:url];
-            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                                          messageAsDictionary:@{@"type":@"toPost", @"postId":[array lastObject]}];
-            [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
-            
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
             
         }
         if ([urlStr rangeOfString:@"chat.tiegushi.com"].location != NSNotFound) {
